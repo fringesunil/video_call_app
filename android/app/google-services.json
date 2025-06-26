@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "180515864551",
+    "project_id": "vcapp-b7eae",
+    "storage_bucket": "vcapp-b7eae.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:180515864551:android:be3cd6f219ad6ffb5b8742",
+        "android_client_info": {
+          "package_name": "com.example.vcapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCy7nviaT6NfQOv1L7q8KuvEgzid_SEjVg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

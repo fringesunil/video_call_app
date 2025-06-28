@@ -1,23 +1,218 @@
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:vcapp/services/call_services.dart';
 import 'package:vcapp/services/notification_services.dart';
-import 'video_call_screen.dart';
+
 import 'auth_screen.dart';
+import 'video_call_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State {
   User? _currentUser;
   int? _currentUserId;
   String? _currentUserFcmToken;
+  final Map<String, bool> _isCallingMap = {};
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0f0f0f),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'CallSync',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout, color: Colors.white.withOpacity(0.8)),
+            onPressed: _logout,
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Available Users',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: StreamBuilder(
+                  stream:
+                      FirebaseFirestore.instance
+                          .collection('users')
+                          .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Error loading users',
+                          style: TextStyle(
+                            color: Colors.red.shade600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      );
+                    }
+                    if (!snapshot.hasData) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF00d4aa),
+                          strokeWidth: 2,
+                        ),
+                      );
+                    }
+
+                    final users =
+                        snapshot.data!.docs
+                            .where((doc) => doc.id != _currentUser?.uid)
+                            .toList();
+
+                    if (users.isEmpty) {
+                      return Center(
+                        child: Text(
+                          'No other users found',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 16,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      itemCount: users.length,
+                      itemBuilder: (context, index) {
+                        final user = users[index];
+                        final email = user['email'] as String;
+                        final userId = user['userId'].toString();
+                        final fcmToken = user['fcmToken'] as String;
+                        final displayName = email.replaceAll('@gmail.com', '');
+                        final isCalling = _isCallingMap[userId] ?? false;
+
+                        return Container(
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1a1a1a).withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF00d4aa).withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(
+                                0xFF00d4aa,
+                              ).withOpacity(0.2),
+                              radius: 24,
+                              child: const Icon(
+                                Icons.person,
+                                color: Color(0xFF00d4aa),
+                                size: 28,
+                              ),
+                            ),
+                            title: Text(
+                              displayName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            trailing: Material(
+                              color:
+                                  isCalling
+                                      ? Colors.grey
+                                      : const Color(0xFF00d4aa),
+                              borderRadius: BorderRadius.circular(12),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap:
+                                    isCalling
+                                        ? null
+                                        : () => _startCall(
+                                          userId,
+                                          fcmToken,
+                                          displayName,
+                                        ),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      isCalling
+                                          ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                          : const Icon(
+                                            Icons.video_call,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        isCalling ? 'Calling...' : 'Call',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -27,22 +222,17 @@ class _HomeScreenState extends State<HomeScreen> {
     _setupFirebaseMessaging();
   }
 
-  Future<void> _setupUserData() async {
-    if (_currentUser != null) {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(_currentUser!.uid)
-          .get();
-      if (mounted) {
-        setState(() {
-          _currentUserId = userDoc.data()?['userId'];
-          _currentUserFcmToken = userDoc.data()?['fcmToken'];
-        });
-      }
+  void _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AuthScreen()),
+      );
     }
   }
 
-  Future<void> _setupFirebaseMessaging() async {
+  Future _setupFirebaseMessaging() async {
     final fcmToken = await FirebaseMessaging.instance.getToken();
     if (_currentUser != null && fcmToken != null) {
       await FirebaseFirestore.instance
@@ -63,7 +253,9 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+    FirebaseMessaging.instance.getInitialMessage().then((
+      RemoteMessage? message,
+    ) {
       if (message != null && message.data['type'] == 'call' && mounted) {
         debugPrint('Initial message received: ${message.data}');
         NotificationService.showCallNotification(
@@ -86,158 +278,68 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _startCall(String targetUserId, String targetFcmToken, String email) async {
-    if (_currentUserId != null) {
-      const channelName = 'fringe';
-      await CallService.initiateCall(
-        callerId: _currentUserId.toString(),
-        targetUserId: targetUserId,
-        channelName: channelName,
-        targetFcmToken: targetFcmToken,
-      );
+  Future _setupUserData() async {
+    if (_currentUser != null) {
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(_currentUser!.uid)
+              .get();
       if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VideoCallScreen(
-              channelName: channelName,
-              userId: _currentUserId!,
-            ),
-          ),
-        );
+        setState(() {
+          _currentUserId = userDoc.data()?['userId'];
+          _currentUserFcmToken = userDoc.data()?['fcmToken'];
+        });
       }
     }
   }
 
-  void _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AuthScreen()),
-      );
+  void _startCall(
+    String targetUserId,
+    String targetFcmToken,
+    String displayName,
+  ) async {
+    if (_currentUserId != null) {
+      setState(() {
+        _isCallingMap[targetUserId] = true;
+      });
+
+      try {
+        const channelName = 'sreesh';
+        await CallService.initiateCall(
+          callerId: _currentUserId.toString(),
+          targetUserId: targetUserId,
+          channelName: channelName,
+          targetFcmToken: targetFcmToken,
+        );
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => VideoCallScreen(
+                    channelName: channelName,
+                    userId: _currentUserId!,
+                  ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to initiate call: $e'),
+              backgroundColor: Colors.red.shade600,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isCallingMap.remove(targetUserId);
+          });
+        }
+      }
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1a1a2e),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Video Call App',
-          style: TextStyle(color: Colors.white),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: _logout,
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Your User ID: ${_currentUserId ?? 'Loading...'}',
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Available Users',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection('users').snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return const Center(
-                        child: Text(
-                          'Error loading users',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      );
-                    }
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final users = snapshot.data!.docs
-                        .where((doc) => doc.id != _currentUser?.uid)
-                        .toList();
-
-                    if (users.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'No other users found',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      itemCount: users.length,
-                      itemBuilder: (context, index) {
-                        final user = users[index];
-                        final email = user['email'] as String;
-                        final userId = user['userId'].toString();
-                        final fcmToken = user['fcmToken'] as String;
-
-                        return Card(
-                          color: Colors.white.withOpacity(0.1),
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.blue.withOpacity(0.3),
-                              child: const Icon(Icons.person, color: Colors.white),
-                            ),
-                            title: Text(
-                              email,
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                            subtitle: Text(
-                              'User ID: $userId',
-                              style: const TextStyle(color: Colors.grey),
-                            ),
-                            trailing: ElevatedButton(
-                              onPressed: () => _startCall(userId, fcmToken, email),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.video_call, size: 20),
-                                  SizedBox(width: 5),
-                                  Text('Call'),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

@@ -3,10 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:vcapp/services/call_services.dart';
-import 'package:vcapp/services/notification_services.dart';
-
-import 'auth_screen.dart';
-import 'video_call_screen.dart';
+import 'package:vcapp/screens/auth_screen.dart';
+import 'package:vcapp/screens/video_call_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,7 +13,7 @@ class HomeScreen extends StatefulWidget {
   State createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State {
+class _HomeScreenState extends State<HomeScreen> {
   User? _currentUser;
   int? _currentUserId;
   String? _currentUserFcmToken;
@@ -62,10 +60,7 @@ class _HomeScreenState extends State {
               const SizedBox(height: 20),
               Expanded(
                 child: StreamBuilder(
-                  stream:
-                      FirebaseFirestore.instance
-                          .collection('users')
-                          .snapshots(),
+                  stream: FirebaseFirestore.instance.collection('users').snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
                       return Center(
@@ -87,10 +82,9 @@ class _HomeScreenState extends State {
                       );
                     }
 
-                    final users =
-                        snapshot.data!.docs
-                            .where((doc) => doc.id != _currentUser?.uid)
-                            .toList();
+                    final users = snapshot.data!.docs
+                        .where((doc) => doc.id != _currentUser?.uid)
+                        .toList();
 
                     if (users.isEmpty) {
                       return Center(
@@ -130,9 +124,7 @@ class _HomeScreenState extends State {
                               vertical: 8,
                             ),
                             leading: CircleAvatar(
-                              backgroundColor: const Color(
-                                0xFF00d4aa,
-                              ).withOpacity(0.2),
+                              backgroundColor: const Color(0xFF00d4aa).withOpacity(0.2),
                               radius: 24,
                               child: const Icon(
                                 Icons.person,
@@ -149,21 +141,11 @@ class _HomeScreenState extends State {
                               ),
                             ),
                             trailing: Material(
-                              color:
-                                  isCalling
-                                      ? Colors.grey
-                                      : const Color(0xFF00d4aa),
+                              color: isCalling ? Colors.grey : const Color(0xFF00d4aa),
                               borderRadius: BorderRadius.circular(12),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(12),
-                                onTap:
-                                    isCalling
-                                        ? null
-                                        : () => _startCall(
-                                          userId,
-                                          fcmToken,
-                                          displayName,
-                                        ),
+                                onTap: isCalling ? null : () => _startCall(userId, fcmToken, displayName),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
@@ -174,18 +156,18 @@ class _HomeScreenState extends State {
                                     children: [
                                       isCalling
                                           ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
+                                            )
                                           : const Icon(
-                                            Icons.video_call,
-                                            color: Colors.white,
-                                            size: 20,
-                                          ),
+                                              Icons.video_call,
+                                              color: Colors.white,
+                                              size: 20,
+                                            ),
                                       const SizedBox(width: 8),
                                       Text(
                                         isCalling ? 'Calling...' : 'Call',
@@ -232,113 +214,88 @@ class _HomeScreenState extends State {
     }
   }
 
-  Future _setupFirebaseMessaging() async {
-    final fcmToken = await FirebaseMessaging.instance.getToken();
-    if (_currentUser != null && fcmToken != null) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(_currentUser!.uid)
-          .update({'fcmToken': fcmToken});
-      debugPrint('FCM Token updated for user ${_currentUser!.uid}: $fcmToken');
-    }
-
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('Foreground message received: ${message.data}');
-      if (message.data['type'] == 'call' && mounted) {
-        NotificationService.showCallNotification(
-          message.data,
-          context: context,
-          currentUserId: _currentUserId,
-        );
+  Future<void> _setupFirebaseMessaging() async {
+    try {
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (_currentUser != null && fcmToken != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(_currentUser!.uid)
+            .update({'fcmToken': fcmToken});
+        debugPrint('FCM Token updated for user ${_currentUser!.uid}: $fcmToken');
       }
-    });
-
-    FirebaseMessaging.instance.getInitialMessage().then((
-      RemoteMessage? message,
-    ) {
-      if (message != null && message.data['type'] == 'call' && mounted) {
-        debugPrint('Initial message received: ${message.data}');
-        NotificationService.showCallNotification(
-          message.data,
-          context: context,
-          currentUserId: _currentUserId,
-        );
-      }
-    });
-
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      if (message.data['type'] == 'call' && mounted) {
-        debugPrint('App opened from notification: ${message.data}');
-        NotificationService.showCallNotification(
-          message.data,
-          context: context,
-          currentUserId: _currentUserId,
-        );
-      }
-    });
-  }
-
-  Future _setupUserData() async {
-    if (_currentUser != null) {
-      final userDoc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(_currentUser!.uid)
-              .get();
-      if (mounted) {
-        setState(() {
-          _currentUserId = userDoc.data()?['userId'];
-          _currentUserFcmToken = userDoc.data()?['fcmToken'];
-        });
-      }
+    } catch (e) {
+      debugPrint('Error updating FCM token: $e');
     }
   }
 
-  void _startCall(
-    String targetUserId,
-    String targetFcmToken,
-    String displayName,
-  ) async {
-    if (_currentUserId != null) {
-      setState(() {
-        _isCallingMap[targetUserId] = true;
-      });
-
-      try {
-        const channelName = 'sreesh';
-        await CallService.initiateCall(
-          callerId: _currentUserId.toString(),
-          targetUserId: targetUserId,
-          channelName: channelName,
-          targetFcmToken: targetFcmToken,
-        );
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => VideoCallScreen(
-                    channelName: channelName,
-                    userId: _currentUserId!,
-                  ),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to initiate call: $e'),
-              backgroundColor: Colors.red.shade600,
-            ),
-          );
-        }
-      } finally {
+  Future<void> _setupUserData() async {
+    try {
+      if (_currentUser != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(_currentUser!.uid)
+            .get();
         if (mounted) {
           setState(() {
-            _isCallingMap.remove(targetUserId);
+            _currentUserId = userDoc.data()?['userId'];
+            _currentUserFcmToken = userDoc.data()?['fcmToken'];
           });
         }
+      }
+    } catch (e) {
+      debugPrint('Error fetching user data: $e');
+    }
+  }
+
+  void _startCall(String targetUserId, String targetFcmToken, String displayName) async {
+    if (_currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('User ID not available. Please try again.'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isCallingMap[targetUserId] = true;
+    });
+
+    try {
+      const channelName = 'sreesh';
+      await CallService.initiateCall(
+        callerId: _currentUserId.toString(),
+        targetUserId: targetUserId,
+        channelName: channelName,
+        targetFcmToken: targetFcmToken,
+      );
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VideoCallScreen(
+              channelName: channelName,
+              userId: _currentUserId!,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to initiate call: $e'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCallingMap.remove(targetUserId);
+        });
       }
     }
   }

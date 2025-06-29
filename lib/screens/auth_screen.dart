@@ -13,17 +13,16 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen>
-    with TickerProviderStateMixin {
+class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _firebaseAuth = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
-  
+
   bool _isLogin = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
-  
+
   late AnimationController _animationController;
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
@@ -34,133 +33,136 @@ class _AuthScreenState extends State<AuthScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        height: MediaQuery.of(context).size.height,
         decoration: const BoxDecoration(
           gradient: RadialGradient(
             center: Alignment.topLeft,
             radius: 1.5,
-            colors: [
-              Color(0xFF00d4aa),
-              Color(0xFF00b894),
-              Color(0xFF0f0f0f),
-            ],
+            colors: [Color(0xFF00d4aa), Color(0xFF00b894), Color(0xFF0f0f0f)],
           ),
         ),
         child: SafeArea(
-          child: AnimatedBuilder(
-            animation: _animationController,
-            builder: (context, child) {
-              return FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Animated Logo/Title Section
-                          ScaleTransition(
-                            scale: _scaleAnimation,
-                            child: Container(
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: const Color(0xFF00d4aa).withOpacity(0.2),
-                                border: Border.all(
-                                  color: const Color(0xFF00d4aa).withOpacity(0.5),
-                                  width: 2,
+          child: SingleChildScrollView(
+            child: AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Animated Logo/Title Section
+                            ScaleTransition(
+                              scale: _scaleAnimation,
+                              child: Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(
+                                    0xFF00d4aa,
+                                  ).withOpacity(0.2),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFF00d4aa,
+                                    ).withOpacity(0.5),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.video_call,
+                                  size: 48,
+                                  color: Color(0xFF00d4aa),
                                 ),
                               ),
-                              child: const Icon(
-                                Icons.video_call,
-                                size: 48,
-                                color: Color(0xFF00d4aa),
+                            ),
+                            const SizedBox(height: 32),
+
+                            // Title with Gradient
+                            ShaderMask(
+                              shaderCallback:
+                                  (bounds) => const LinearGradient(
+                                    colors: [Colors.white, Colors.white70],
+                                  ).createShader(bounds),
+                              child: const Text(
+                                'CallSync',
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  letterSpacing: 1.2,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 32),
-                          
-                          // Title with Gradient
-                          ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [Colors.white, Colors.white70],
-                            ).createShader(bounds),
-                            child: const Text(
-                              'CallSync',
+
+                            Text(
+                              _isLogin ? 'Welcome back' : 'Create your account',
                               style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                                letterSpacing: 1.2,
+                                fontSize: 16,
+                                color: Colors.white.withOpacity(0.8),
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
-                          ),
-                          
-                          Text(
-                            _isLogin ? 'Welcome back' : 'Create your account',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white.withOpacity(0.8),
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 48),
+                            const SizedBox(height: 48),
 
-                          // Form Fields
-                          _buildEmailField(),
-                          const SizedBox(height: 20),
-                          _buildPasswordField(),
-                          const SizedBox(height: 32),
+                            // Form Fields
+                            _buildEmailField(),
+                            const SizedBox(height: 20),
+                            _buildPasswordField(),
+                            const SizedBox(height: 32),
 
-                          // Action Button
-                          _buildActionButton(),
-                          const SizedBox(height: 24),
+                            // Action Button
+                            _buildActionButton(),
+                            const SizedBox(height: 24),
 
-                          // Switch Mode Button
-                          _buildSwitchModeButton(),
-                          
-                          const SizedBox(height: 32),
-                          
-                          // Divider with text
-                          // Row(
-                          //   children: [
-                          //     Expanded(
-                          //       child: Container(
-                          //         height: 1,
-                          //         color: Colors.white.withOpacity(0.3),
-                          //       ),
-                          //     ),
-                          //     Padding(
-                          //       padding: const EdgeInsets.symmetric(horizontal: 16),
-                          //       child: Text(
-                          //         'or',
-                          //         style: TextStyle(
-                          //           color: Colors.white.withOpacity(0.6),
-                          //         ),
-                          //       ),
-                          //     ),
-                          //     Expanded(
-                          //       child: Container(
-                          //         height: 1,
-                          //         color: Colors.white.withOpacity(0.3),
-                          //       ),
-                          //     ),
-                          //   ],
-                          // ),
-                          
-                          const SizedBox(height: 24),
-                          
-                          // Social Login Options
-                          // _buildSocialLoginButtons(),
-                        ],
+                            // Switch Mode Button
+                            _buildSwitchModeButton(),
+
+                            const SizedBox(height: 32),
+
+                            // Divider with text
+                            // Row(
+                            //   children: [
+                            //     Expanded(
+                            //       child: Container(
+                            //         height: 1,
+                            //         color: Colors.white.withOpacity(0.3),
+                            //       ),
+                            //     ),
+                            //     Padding(
+                            //       padding: const EdgeInsets.symmetric(horizontal: 16),
+                            //       child: Text(
+                            //         'or',
+                            //         style: TextStyle(
+                            //           color: Colors.white.withOpacity(0.6),
+                            //         ),
+                            //       ),
+                            //     ),
+                            //     Expanded(
+                            //       child: Container(
+                            //         height: 1,
+                            //         color: Colors.white.withOpacity(0.3),
+                            //       ),
+                            //     ),
+                            //   ],
+                            // ),
+                            const SizedBox(height: 24),
+
+                            // Social Login Options
+                            // _buildSocialLoginButtons(),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -188,29 +190,29 @@ class _AuthScreenState extends State<AuthScreen>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
+    );
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
-    ));
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+      ),
+    );
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.0, 0.6, curve: Curves.elasticOut),
-    ));
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.elasticOut),
+      ),
+    );
 
     _animationController.forward();
   }
@@ -222,10 +224,7 @@ class _AuthScreenState extends State<AuthScreen>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF00d4aa),
-            Color(0xFF00b894),
-          ],
+          colors: [Color(0xFF00d4aa), Color(0xFF00b894)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -244,24 +243,25 @@ class _AuthScreenState extends State<AuthScreen>
           onTap: _isLoading ? null : _submit,
           child: Container(
             alignment: Alignment.center,
-            child: _isLoading
-                ? const SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
+            child:
+                _isLoading
+                    ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                    : Text(
+                      _isLogin ? 'Sign In' : 'Create Account',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                  )
-                : Text(
-                    _isLogin ? 'Sign In' : 'Create Account',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
           ),
         ),
       ),
@@ -388,11 +388,7 @@ class _AuthScreenState extends State<AuthScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                color: const Color(0xFF00d4aa),
-                size: 24,
-              ),
+              Icon(icon, color: const Color(0xFF00d4aa), size: 24),
               const SizedBox(width: 8),
               Text(
                 label,
@@ -450,11 +446,11 @@ class _AuthScreenState extends State<AuthScreen>
       ),
       child: RichText(
         text: TextSpan(
-          text: _isLogin ? "Don't have an account? " : "Already have an account? ",
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
-            fontSize: 16,
-          ),
+          text:
+              _isLogin
+                  ? "Don't have an account? "
+                  : "Already have an account? ",
+          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 16),
           children: [
             TextSpan(
               text: _isLogin ? 'Sign Up' : 'Sign In',
@@ -492,7 +488,7 @@ class _AuthScreenState extends State<AuthScreen>
 
     HapticFeedback.lightImpact();
     setState(() => _isLoading = true);
-    
+
     try {
       UserCredential userCredential;
       if (_isLogin) {
@@ -510,20 +506,26 @@ class _AuthScreenState extends State<AuthScreen>
             .collection('users')
             .doc(userCredential.user!.uid)
             .set({
-          'email': _emailController.text.trim(),
-          'fcmToken': fcmToken,
-          'userId': userCredential.user!.uid.hashCode.abs(),
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+              'email': _emailController.text.trim(),
+              'fcmToken': fcmToken,
+              'userId': userCredential.user!.uid.hashCode.abs(),
+              'createdAt': FieldValue.serverTimestamp(),
+            });
       }
-      
+
       if (userCredential.user != null && mounted) {
         HapticFeedback.lightImpact();
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            pageBuilder:
+                (context, animation, secondaryAnimation) => const HomeScreen(),
+            transitionsBuilder: (
+              context,
+              animation,
+              secondaryAnimation,
+              child,
+            ) {
               return FadeTransition(opacity: animation, child: child);
             },
             transitionDuration: const Duration(milliseconds: 300),

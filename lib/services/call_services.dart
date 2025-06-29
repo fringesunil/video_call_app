@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:uuid/uuid.dart';
 
 class CallService {
-  static const String serverUrl =
-      'https://cloud-message.onrender.com/initiate-call';
+  static const String serverUrl = 'https://cloud-message.onrender.com/initiate-call';
 
   static Future<void> initiateCall({
     required String callerId,
@@ -12,12 +12,14 @@ class CallService {
     required String channelName,
     required String targetFcmToken,
   }) async {
+    final uuid = Uuid().v4();
     final payload = {
       'callerId': callerId,
       'targetUserId': targetUserId,
       'channelName': channelName,
       'targetFcmToken': targetFcmToken,
       'type': 'call',
+      'uuid': uuid,
     };
 
     debugPrint('Sending call notification with payload: $payload');
